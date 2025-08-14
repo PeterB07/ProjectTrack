@@ -8,8 +8,8 @@ import 'package:traccar_client/password_service.dart';
 import 'package:traccar_client/qr_code_screen.dart';
 import 'package:wakelock_partial_android/wakelock_partial_android.dart';
 
-import 'l10n/app_localizations.dart';
-import 'preferences.dart';
+import 'package:traccar_client/l10n/app_localizations.dart';
+import 'package:traccar_client/preferences.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -19,7 +19,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool advanced = false;
+  bool advanced = true;
 
   String _getAccuracyLabel(String? key) {
     return switch (key) {
@@ -64,7 +64,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (result != null && result.isNotEmpty) {
       if (key == Preferences.url) {
         final uri = Uri.tryParse(result);
-        if (uri == null || uri.host.isEmpty || !(uri.scheme == 'http' || uri.scheme == 'https')) {
+        if (uri == null || uri.host.isEmpty || !(uri.scheme == 'http' || uri.scheme == 'https' || uri.scheme == 'ws' || uri.scheme == 'wss')) {
           messengerKey.currentState?.showSnackBar(SnackBar(content: Text(errorMessage)));
           return;
         }

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:traccar_client/geolocation_service.dart';
 import 'package:traccar_client/main.dart';
 import 'package:traccar_client/password_service.dart';
 import 'package:traccar_client/preferences.dart';
+import 'package:traccar_client/websocket_service.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart' as bg;
+import 'package:traccar_client/pip_service.dart';
 
 import 'l10n/app_localizations.dart';
 import 'status_screen.dart';
@@ -16,59 +19,52 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool trackingEnabled = false;
-  bool? isMoving;
+  bool isInPipMode = false;
 
   @override
   void initState() {
     super.initState();
-    _initState();
+    // Add an observer to the widget binding to listen for app lifecycle changes.
+    WidgetsBinding.instance.addObserver(this);
+    _checkStatus();
+
+    PipService.onPipModeChanged = (bool pipMode) {
+      setState(() {
+        isInPipMode = pipMode;
+      });
+    };
   }
 
-  void _initState() async {
+  Future<void> _checkStatus() async {
     final state = await bg.BackgroundGeolocation.state;
-    setState(() {
-      trackingEnabled = state.enabled;
-      isMoving = state.isMoving;
-    });
-    bg.BackgroundGeolocation.onEnabledChange((bool enabled) {
-      setState(() {
-        trackingEnabled = enabled;
-      });
-    });
-    bg.BackgroundGeolocation.onMotionChange((bg.Location location) {
-      setState(() {
-        isMoving = location.isMoving;
-      });
-    });
+    if (mounted) {
+      setState(() => trackingEnabled = state.enabled);
+    }
   }
 
-  Future<void> _checkBatteryOptimizations(BuildContext context) async {
-    try {
-      if (!await bg.DeviceSettings.isIgnoringBatteryOptimizations) {
-        final request = await bg.DeviceSettings.showIgnoreBatteryOptimizations();
-        if (!request.seen && context.mounted) {
-          showDialog(
-            context: context,
-            builder: (_) => AlertDialog(
-              scrollable: true,
-              content: Text(AppLocalizations.of(context)!.optimizationMessage),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    bg.DeviceSettings.show(request);
-                  },
-                  child: Text(AppLocalizations.of(context)!.okButton),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    } catch (error) {
-      debugPrint(error.toString());
+  Future<void> _toggleTracking(bool value) async {
+    if (mounted) setState(() => trackingEnabled = value);
+    if (value) {
+      await GeolocationService.start();
+    } else {
+      await GeolocationService.stop();
+    }
+  }
+
+  @override
+  void dispose() {
+    // Remove the observer when the widget is disposed.
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // If the app is paused and tracking is enabled, enter PiP mode.
+    if (state == AppLifecycleState.paused && trackingEnabled) {
+      PipService.enterPipMode();
     }
   }
 
@@ -93,45 +89,7 @@ class _MainScreenState extends State<MainScreen> {
               contentPadding: EdgeInsets.zero,
               title: Text(AppLocalizations.of(context)!.trackingLabel),
               value: trackingEnabled,
-              activeTrackColor: isMoving == false ? Theme.of(context).colorScheme.error :  null,
-              onChanged: (bool value) async {
-                if (await PasswordService.authenticate(context) && mounted) {
-                  if (value) {
-                    try {
-                      await bg.BackgroundGeolocation.start();
-                      if (mounted) {
-                        _checkBatteryOptimizations(context);
-                      }
-                    } on PlatformException catch (error) {
-                      messengerKey.currentState?.showSnackBar(SnackBar(content: Text(error.message ?? error.code)));
-                    }
-                  } else {
-                    bg.BackgroundGeolocation.stop();
-                  }
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            OverflowBar(
-              spacing: 8,
-              children: [
-                FilledButton.tonal(
-                  onPressed: () async {
-                    try {
-                      await bg.BackgroundGeolocation.getCurrentPosition(samples: 1, persist: true, extras: {'manual': true});
-                    } on PlatformException catch (error) {
-                      messengerKey.currentState?.showSnackBar(SnackBar(content: Text(error.message ?? error.code)));
-                    }
-                  },
-                  child: Text(AppLocalizations.of(context)!.locationButton),
-                ),
-                FilledButton.tonal(
-                  onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const StatusScreen()));
-                  },
-                  child: Text(AppLocalizations.of(context)!.statusButton),
-                ),
-              ],
+              onChanged: (value) => _toggleTracking(value),
             ),
           ],
         ),
@@ -163,14 +121,17 @@ class _MainScreenState extends State<MainScreen> {
                 FilledButton.tonal(
                   onPressed: () async {
                     if (await PasswordService.authenticate(context) && mounted) {
-                      await Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      );
                     }
                   },
                   child: Text(AppLocalizations.of(context)!.settingsButton),
                 ),
               ],
             ),
-          ]
+          ],
         ),
       ),
     );

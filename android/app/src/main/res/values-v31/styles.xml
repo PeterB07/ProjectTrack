@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Transparent LaunchTheme for Android 12+ -->
+    <style name="LaunchTheme" parent="@android:style/Theme.Translucent.NoTitleBar.Fullscreen">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
+    <!-- Alias the SplashScreen theme to our transparent LaunchTheme -->
+    <style name="Theme.SplashScreen" parent="@style/LaunchTheme"/>
+</resources>

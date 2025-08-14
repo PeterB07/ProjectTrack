@@ -1,8 +1,8 @@
-
 import 'dart:io';
 import 'dart:math';
 
-import 'package:flutter_background_geolocation/flutter_background_geolocation.dart' as bg;
+import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
+    as bg;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:shared_preferences_android/shared_preferences_android.dart';
 
@@ -20,6 +20,7 @@ class Preferences {
   static const String buffer = 'buffer';
   static const String wakelock = 'wakelock';
   static const String stopDetection = 'stop_detection';
+  static const String email = 'email';
 
   static const String lastTimestamp = 'lastTimestamp';
   static const String lastLatitude = 'lastLatitude';
@@ -28,16 +29,37 @@ class Preferences {
 
   static Future<void> init() async {
     instance = await SharedPreferencesWithCache.create(
-      sharedPreferencesOptions: Platform.isAndroid
-        ? SharedPreferencesAsyncAndroidOptions(backend: SharedPreferencesAndroidBackendLibrary.SharedPreferences)
-        : SharedPreferencesOptions(),
+      sharedPreferencesOptions:
+          Platform.isAndroid
+              ? SharedPreferencesAsyncAndroidOptions(
+                backend:
+                    SharedPreferencesAndroidBackendLibrary.SharedPreferences,
+              )
+              : SharedPreferencesOptions(),
       cacheOptions: SharedPreferencesWithCacheOptions(
         allowList: {
-          id, url, accuracy, distance, interval, angle, heartbeat,
-          fastestInterval, buffer,  wakelock, stopDetection,
-          lastTimestamp, lastLatitude, lastLongitude, lastHeading,
-          'device_id_preference', 'server_url_preference', 'accuracy_preference',
-          'frequency_preference', 'distance_preference', 'buffer_preference',
+          id,
+          url,
+          accuracy,
+          distance,
+          interval,
+          angle,
+          heartbeat,
+          fastestInterval,
+          buffer,
+          wakelock,
+          stopDetection,
+          email,
+          lastTimestamp,
+          lastLatitude,
+          lastLongitude,
+          lastHeading,
+          'device_id_preference',
+          'server_url_preference',
+          'accuracy_preference',
+          'frequency_preference',
+          'distance_preference',
+          'buffer_preference',
         },
       ),
     );
@@ -59,70 +81,72 @@ class Preferences {
         final intValue = int.tryParse(stringValue ?? '') ?? 0;
         await instance.setInt(angle, intValue);
       }
-    } else {
-      await _migrate();
     }
-    await instance.setString(id, instance.getString(id) ?? (Random().nextInt(90000000) + 10000000).toString());
-    await instance.setString(url, instance.getString(url) ?? 'http://demo.traccar.org:5055');
-    await instance.setString(accuracy, instance.getString(accuracy) ?? 'medium');
-    await instance.setInt(interval, instance.getInt(interval) ?? 300);
-    await instance.setInt(distance, instance.getInt(distance) ?? 75);
-    await instance.setBool(buffer, instance.getBool(buffer) ?? true);
-    await instance.setBool(stopDetection, instance.getBool(stopDetection) ?? true);
-    await instance.setInt(fastestInterval, instance.getInt(fastestInterval) ?? 30);
   }
 
   static bg.Config geolocationConfig() {
     final isHighestAccuracy = instance.getString(accuracy) == 'highest';
     final locationUpdateInterval = (instance.getInt(interval) ?? 0) * 1000;
-    final fastestLocationUpdateInterval = (instance.getInt(fastestInterval) ?? 30) * 1000;
+    final fastestLocationUpdateInterval =
+        (instance.getInt(fastestInterval) ?? 30) * 1000;
     final heartbeatInterval = instance.getInt(heartbeat) ?? 0;
     return bg.Config(
-      isMoving: true,
+      isMoving: true, // Always consider moving for continuous tracking
       enableHeadless: true,
       stopOnTerminate: false,
-      startOnBoot: true,
+      startOnBoot: false,
       desiredAccuracy: switch (instance.getString(accuracy)) {
-        'highest' => Platform.isIOS ? bg.Config.DESIRED_ACCURACY_NAVIGATION : bg.Config.DESIRED_ACCURACY_HIGH,
+        'highest' =>
+          Platform.isIOS
+              ? bg.Config.DESIRED_ACCURACY_NAVIGATION
+              : bg.Config.DESIRED_ACCURACY_HIGH,
         'high' => bg.Config.DESIRED_ACCURACY_HIGH,
         'low' => bg.Config.DESIRED_ACCURACY_LOW,
         _ => bg.Config.DESIRED_ACCURACY_MEDIUM,
       },
       autoSync: false,
       url: _formatUrl(instance.getString(url)),
-      params: {
-        'device_id': instance.getString(id),
-      },
-      distanceFilter: isHighestAccuracy ? 0 : instance.getInt(distance)?.toDouble(),
-      locationUpdateInterval: isHighestAccuracy ? 0 : (locationUpdateInterval > 0 ? locationUpdateInterval : null),
-      heartbeatInterval: heartbeatInterval > 0 ? heartbeatInterval : null,
+      params: {'device_id': instance.getString(id)},
+      distanceFilter: 5,
+      locationUpdateInterval: 10000, // More frequent updates
+      fastestLocationUpdateInterval: 5000, // Even faster updates
+      stationaryRadius: 2,
+      heartbeatInterval: 60000, // 1 minute
+      stopTimeout: 0, // Disable automatic stop timeout
       maxRecordsToPersist: instance.getBool(buffer) != false ? -1 : 1,
       logLevel: bg.Config.LOG_LEVEL_VERBOSE,
       logMaxDays: 1,
       locationTemplate: _locationTemplate(),
-      preventSuspend: heartbeatInterval > 0,
+      preventSuspend: true,
       disableElasticity: true,
-      disableStopDetection: instance.getBool(stopDetection) == false,
-      pausesLocationUpdatesAutomatically: Platform.isIOS ? !(isHighestAccuracy || instance.getBool(stopDetection) == false) : null,
-      fastestLocationUpdateInterval: isHighestAccuracy ? 0 : fastestLocationUpdateInterval,
+      disableStopDetection: true, // Ensure location updates are not stopped when device is stationary
+      pausesLocationUpdatesAutomatically:
+          false, // Crucial for continuous tracking, prevent automatic pausing of location updates
+      foregroundService: true, // Run as foreground service on Android
       backgroundPermissionRationale: bg.PermissionRationale(
-        title: 'Allow {applicationName} to access this device\'s location in the background',
-        message: 'For reliable tracking, please enable {backgroundPermissionOptionLabel} location access.',
+        title:
+            'Allow {applicationName} to access this device\'s location in the background',
+        message:
+            'For reliable tracking, please enable {backgroundPermissionOptionLabel} location access.',
         positiveAction: 'Change to {backgroundPermissionOptionLabel}',
-        negativeAction: 'Cancel'
+        negativeAction: 'Cancel',
       ),
       notification: bg.Notification(
         smallIcon: 'drawable/ic_stat_notify',
-        priority: bg.Config.NOTIFICATION_PRIORITY_LOW,
+        title: 'Traccar Client',
+        text: 'Tracking in progress',
+        priority: bg.Config.NOTIFICATION_PRIORITY_HIGH,
+        sticky: true,
       ),
-      showsBackgroundLocationIndicator: false,
+      showsBackgroundLocationIndicator: true,
     );
   }
 
   static String? _formatUrl(String? url) {
     if (url == null) return null;
     final uri = Uri.parse(url);
-    if ((uri.path.isEmpty || uri.path == '') && !url.endsWith('/')) return '$url/';
+    if ((uri.path.isEmpty || uri.path == '') && !url.endsWith('/'))
+      return '$url/';
     return url;
   }
 
@@ -169,13 +193,15 @@ class Preferences {
       instance.remove('accuracy_preference');
     }
     final oldIntervalString = instance.getString('frequency_preference');
-    final oldInterval = oldIntervalString != null ? int.tryParse(oldIntervalString) : null;
+    final oldInterval =
+        oldIntervalString != null ? int.tryParse(oldIntervalString) : null;
     if (oldInterval != null) {
       instance.setInt(interval, oldInterval);
       instance.remove('frequency_preference');
     }
     final oldDistanceString = instance.getString('distance_preference');
-    final oldDistance = oldDistanceString != null ? int.tryParse(oldDistanceString) : null;
+    final oldDistance =
+        oldDistanceString != null ? int.tryParse(oldDistanceString) : null;
     if (oldDistance != null) {
       instance.setInt(distance, oldDistance > 0 ? oldDistance : 75);
       instance.remove('distance_preference');

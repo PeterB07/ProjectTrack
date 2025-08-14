@@ -7,21 +7,20 @@ import 'package:rate_my_app/rate_my_app.dart';
 import 'package:traccar_client/geolocation_service.dart';
 import 'package:traccar_client/push_service.dart';
 import 'package:traccar_client/quick_actions.dart';
-
-import 'l10n/app_localizations.dart';
-import 'main_screen.dart';
-import 'preferences.dart';
+import 'package:traccar_client/websocket_service.dart';
+import 'package:traccar_client/pip_service.dart'; // Import PipService
+import 'package:traccar_client/l10n/app_localizations.dart';
+import 'package:traccar_client/main_screen.dart';
+import 'package:traccar_client/preferences.dart';
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
   await Preferences.init();
+  await Preferences.instance.setString(Preferences.url, 'http://3.17.110.39:8082');
   await Preferences.migrate();
-  await GeolocationService.init();
-  await PushService.init();
   runApp(const MainApp());
 }
 
@@ -33,21 +32,35 @@ class MainApp extends StatefulWidget {
 }
 
 class _MainAppState extends State<MainApp> {
-  RateMyApp rateMyApp = RateMyApp(minDays: 0, minLaunches: 0);
+  final RateMyApp rateMyApp = RateMyApp(minDays: 0, minLaunches: 0);
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await rateMyApp.init();
-      if (mounted && rateMyApp.shouldOpenDialog) {
-        try {
-          await rateMyApp.showRateDialog(context);
-        } catch (error) {
-          developer.log('Failed to show rate dialog', error: error);
-        }
+    _initApp();
+  }
+
+  Future<void> _initApp() async {
+    // Crashlytics setup
+    FlutterError.onError = FirebaseCrashlytics.instance.recordFlutterFatalError;
+    // Enforce default preferences
+
+    // Initialize services
+    await GeolocationService.init();
+    await PushService.init();
+    await WebSocketService.instance.start();
+    PipService.init(); // Initialize PiP service
+
+    // Prompt for rating if needed
+    await rateMyApp.init();
+    if (mounted && rateMyApp.shouldOpenDialog) {
+      try {
+        await rateMyApp.showRateDialog(context);
+      } catch (error) {
+        developer.log('Failed to show rate dialog', error: error);
       }
-    });
+    }
+
   }
 
   @override
@@ -57,23 +70,14 @@ class _MainAppState extends State<MainApp> {
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          brightness: Brightness.light,
-        ),
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: Colors.green, brightness: Brightness.light),
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.green,
-          brightness: Brightness.dark,
-        ),
+        colorScheme:
+            ColorScheme.fromSeed(seedColor: Colors.green, brightness: Brightness.dark),
       ),
-      home: Stack(
-        children: const [
-          QuickActionsInitializer(),
-          MainScreen(),
-        ],
-      ),
+      home: const MainScreen(),
     );
   }
 }

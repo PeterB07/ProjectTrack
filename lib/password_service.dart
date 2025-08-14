@@ -48,6 +48,11 @@ class PasswordService {
     return result == true;
   }
 
+  /// Read stored password for session login
+  static Future<String?> readPassword() async {
+    return _secureStorage.read(key: _passwordKey);
+  }
+
   static Future<void> setPassword(String password) async {
     if (password.isNotEmpty) {
       await _secureStorage.write(key: _passwordKey, value: password);
