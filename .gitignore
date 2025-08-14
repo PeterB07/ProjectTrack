@@ -47,3 +47,7 @@ app.*.map.json
 # Flutter gen-l10n outputs
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
+
+# Keystore files
+/android/key.properties
+/android/app/upload-keystore.jks
