@@ -8,7 +8,6 @@ import 'package:traccar_client/geolocation_service.dart';
 import 'package:traccar_client/push_service.dart';
 import 'package:traccar_client/quick_actions.dart';
 import 'package:traccar_client/websocket_service.dart';
-import 'package:traccar_client/pip_service.dart'; // Import PipService
 import 'package:traccar_client/l10n/app_localizations.dart';
 import 'package:traccar_client/main_screen.dart';
 import 'package:traccar_client/preferences.dart';
@@ -49,8 +48,6 @@ class _MainAppState extends State<MainApp> {
     await GeolocationService.init();
     await PushService.init();
     await WebSocketService.instance.start();
-    PipService.init(); // Initialize PiP service
-
     // Prompt for rating if needed
     await rateMyApp.init();
     if (mounted && rateMyApp.shouldOpenDialog) {

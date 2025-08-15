@@ -6,8 +6,6 @@ import 'package:traccar_client/password_service.dart';
 import 'package:traccar_client/preferences.dart';
 import 'package:traccar_client/websocket_service.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart' as bg;
-import 'package:traccar_client/pip_service.dart';
-
 import 'l10n/app_localizations.dart';
 import 'status_screen.dart';
 import 'settings_screen.dart';
@@ -21,20 +19,12 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   bool trackingEnabled = false;
-  bool isInPipMode = false;
-
   @override
   void initState() {
     super.initState();
     // Add an observer to the widget binding to listen for app lifecycle changes.
     WidgetsBinding.instance.addObserver(this);
     _checkStatus();
-
-    PipService.onPipModeChanged = (bool pipMode) {
-      setState(() {
-        isInPipMode = pipMode;
-      });
-    };
   }
 
   Future<void> _checkStatus() async {
@@ -60,13 +50,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     super.dispose();
   }
 
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // If the app is paused and tracking is enabled, enter PiP mode.
-    if (state == AppLifecycleState.paused && trackingEnabled) {
-      PipService.enterPipMode();
-    }
-  }
 
   Widget _buildTrackingCard() {
     return Card(

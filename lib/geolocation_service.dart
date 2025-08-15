@@ -3,6 +3,7 @@ import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
     as bg;
 import 'package:traccar_client/location_cache.dart';
@@ -11,6 +12,8 @@ import 'package:http/http.dart' as http;
 import 'package:wakelock_partial_android/wakelock_partial_android.dart';
 
 class GeolocationService {
+  static final platform = MethodChannel('org.traccar.client/tracking');
+
   static Future<void> init() async {
     await bg.BackgroundGeolocation.requestPermission();
     await bg.BackgroundGeolocation.ready(Preferences.geolocationConfig());
@@ -30,6 +33,9 @@ class GeolocationService {
 
  static Future<void> start() async {
     await bg.BackgroundGeolocation.start();
+    if (Platform.isAndroid) {
+      platform.invokeMethod('startTrackingService');
+    }
     // Force a fresh location update on start
     await bg.BackgroundGeolocation.getCurrentPosition(
       samples: 3, // Get a few samples for better accuracy
@@ -44,6 +50,9 @@ class GeolocationService {
   static Future<void> stop() async {
     await sendOfflineStatus(); // Send offline status update
     await bg.BackgroundGeolocation.stop();
+    if (Platform.isAndroid) {
+      platform.invokeMethod('stopTrackingService');
+    }
     // Stop heartbeat timer
     _stopHeartbeatTimer();
   }
