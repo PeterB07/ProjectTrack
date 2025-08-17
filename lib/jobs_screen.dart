@@ -18,9 +18,9 @@ class JobsScreen extends StatelessWidget {
 }
 
 class TrackingScreen extends StatefulWidget {
-  final String driverId, jobId, src, dest;
+  final String driverId, jobId, src, dest, pay, details;
 
-  const TrackingScreen(this.driverId, this.jobId, this.src, this.dest, {super.key});
+  const TrackingScreen(this.driverId, this.jobId, this.src, this.dest, this.pay, this.details, {super.key});
 
   @override
   State<TrackingScreen> createState() => _TrackingScreenState();
@@ -60,6 +60,8 @@ class _TrackingScreenState extends State<TrackingScreen> {
             Text("Driver: ${widget.driverId}", style: const TextStyle(fontSize: 18)),
             Text("From: ${widget.src}", style: const TextStyle(fontSize: 18)),
             Text("To: ${widget.dest}", style: const TextStyle(fontSize: 18)),
+            Text("Pay: ${widget.pay}", style: const TextStyle(fontSize: 18)),
+            Text("Details: ${widget.details}", style: const TextStyle(fontSize: 18)),
             const SizedBox(height: 40),
             
             LinearProgressIndicator(value: progress, minHeight: 15),

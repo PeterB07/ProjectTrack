@@ -37,7 +37,7 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   final RateMyApp rateMyApp = RateMyApp(minDays: 0, minLaunches: 0);
   StreamSubscription? _sub;
-  String? driverId, jobId, src, dest;
+  String? driverId, jobId, src, dest, pay, details;
 
   @override
   void initState() {
@@ -75,6 +75,8 @@ class _MainAppState extends State<MainApp> {
           jobId = uri.queryParameters['jobId'];
           src = uri.queryParameters['src'];
           dest = uri.queryParameters['dest'];
+          pay = uri.queryParameters['pay'];
+          details = uri.queryParameters['details'];
         });
       }
     }, onError: (err) {
@@ -104,7 +106,7 @@ class _MainAppState extends State<MainApp> {
       ),
       home: driverId == null
           ? const HomeScreen()
-          : TrackingScreen(driverId!, jobId!, src!, dest!),
+          : TrackingScreen(driverId!, jobId!, src!, dest!, pay!, details!),
     );
   }
 }
