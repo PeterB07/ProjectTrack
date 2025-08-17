@@ -28,6 +28,8 @@ dependencies:
   web_socket_channel: ^2.2.0
   device_info_plus: ^11.5.0
   geolocator: ^9.0.2
+  app_links: ^3.4.1
+  url_launcher: ^6.2.5
 
 dev_dependencies:
   flutter_test:

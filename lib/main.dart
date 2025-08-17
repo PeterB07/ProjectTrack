@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'dart:developer' as developer;
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rate_my_app/rate_my_app.dart';
 import 'package:traccar_client/geolocation_service.dart';
 import 'package:traccar_client/push_service.dart';
 import 'package:traccar_client/quick_actions.dart';
 import 'package:traccar_client/websocket_service.dart';
 import 'package:traccar_client/l10n/app_localizations.dart';
-import 'package:traccar_client/main_screen.dart';
+import 'package:traccar_client/main_screen.dart' as main_screen;
 import 'package:traccar_client/preferences.dart';
+import 'package:traccar_client/jobs_screen.dart';
+import 'package:app_links/app_links.dart';
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -32,11 +36,14 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   final RateMyApp rateMyApp = RateMyApp(minDays: 0, minLaunches: 0);
+  StreamSubscription? _sub;
+  String? driverId, jobId, src, dest;
 
   @override
   void initState() {
     super.initState();
     _initApp();
+    _initDeepLinkListener();
   }
 
   Future<void> _initApp() async {
@@ -57,7 +64,28 @@ class _MainAppState extends State<MainApp> {
         developer.log('Failed to show rate dialog', error: error);
       }
     }
+  }
 
+  void _initDeepLinkListener() {
+    final _appLinks = AppLinks();
+    _sub = _appLinks.uriLinkStream.listen((Uri uri) {
+      if (mounted) {
+        setState(() {
+          driverId = uri.queryParameters['driverId'];
+          jobId = uri.queryParameters['jobId'];
+          src = uri.queryParameters['src'];
+          dest = uri.queryParameters['dest'];
+        });
+      }
+    }, onError: (err) {
+      developer.log("Error in deep link: $err");
+    });
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   @override
@@ -74,7 +102,55 @@ class _MainAppState extends State<MainApp> {
         colorScheme:
             ColorScheme.fromSeed(seedColor: Colors.green, brightness: Brightness.dark),
       ),
-      home: const MainScreen(),
+      home: driverId == null
+          ? const HomeScreen()
+          : TrackingScreen(driverId!, jobId!, src!, dest!),
+    );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+
+  static const List<Widget> _widgetOptions = <Widget>[
+    main_screen.MainScreen(),
+    JobsScreen(),
+  ];
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: _widgetOptions.elementAt(_selectedIndex),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.work),
+            label: 'Jobs',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.green,
+        onTap: _onItemTapped,
+      ),
     );
   }
 }

@@ -80,45 +80,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     );
   }
 
-  Widget _buildSettingsCard() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(AppLocalizations.of(context)!.settingsTitle),
-              titleTextStyle: Theme.of(context).textTheme.headlineMedium,
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: Text(AppLocalizations.of(context)!.urlLabel),
-              subtitle: Text(Preferences.instance.getString(Preferences.url) ?? ''),
-            ),
-            const SizedBox(height: 8),
-            OverflowBar(
-              spacing: 8,
-              children: [
-                FilledButton.tonal(
-                  onPressed: () async {
-                    if (await PasswordService.authenticate(context) && mounted) {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                      );
-                    }
-                  },
-                  child: Text(AppLocalizations.of(context)!.settingsButton),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -126,13 +87,30 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         title: Text('Traccar Client'),
       ),
+      drawer: Drawer(
+        child: ListView(
+          padding: EdgeInsets.zero,
+          children: [
+            ListTile(
+              leading: Icon(Icons.settings),
+              title: const Text('Settings'),
+              onTap: () async {
+                if (await PasswordService.authenticate(context) && mounted) {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
             _buildTrackingCard(),
-            const SizedBox(height: 16),
-            _buildSettingsCard(),
           ],
         ),
       ),
