@@ -14,7 +14,7 @@ import 'package:traccar_client/l10n/app_localizations.dart';
 import 'package:traccar_client/main_screen.dart' as main_screen;
 import 'package:traccar_client/preferences.dart';
 import 'package:traccar_client/jobs_screen.dart';
-import 'package:app_links/app_links.dart';
+import 'package:firebase_dynamic_links/firebase_dynamic_links.dart';
 
 final messengerKey = GlobalKey<ScaffoldMessengerState>();
 
@@ -66,22 +66,31 @@ class _MainAppState extends State<MainApp> {
     }
   }
 
-  void _initDeepLinkListener() {
-    final _appLinks = AppLinks();
-    _sub = _appLinks.uriLinkStream.listen((Uri uri) {
-      if (mounted) {
-        setState(() {
-          driverId = uri.queryParameters['driverId'];
-          jobId = uri.queryParameters['jobId'];
-          src = uri.queryParameters['src'];
-          dest = uri.queryParameters['dest'];
-          pay = uri.queryParameters['pay'];
-          details = uri.queryParameters['details'];
-        });
-      }
-    }, onError: (err) {
-      developer.log("Error in deep link: $err");
+  void _initDeepLinkListener() async {
+    final PendingDynamicLinkData? initialLink = await FirebaseDynamicLinks.instance.getInitialLink();
+
+    if (initialLink != null) {
+      _handleDynamicLink(initialLink.link);
+    }
+
+    _sub = FirebaseDynamicLinks.instance.onLink.listen((dynamicLinkData) {
+      _handleDynamicLink(dynamicLinkData.link);
+    }, onError: (e) {
+      developer.log("Error in dynamic link: $e");
     });
+  }
+
+  void _handleDynamicLink(Uri uri) {
+    if (uri.path == '/job' && mounted) {
+      setState(() {
+        driverId = uri.queryParameters['driverId'];
+        jobId = uri.queryParameters['jobId'];
+        src = uri.queryParameters['src'];
+        dest = uri.queryParameters['dest'];
+        pay = uri.queryParameters['pay'];
+        details = uri.queryParameters['details'];
+      });
+    }
   }
 
   @override
