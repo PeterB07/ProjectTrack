@@ -63,6 +63,16 @@ class Preferences {
         },
       ),
     );
+
+    // Set default accuracy to highest if not already set
+    if (instance.getString(accuracy) == null) {
+      await instance.setString(accuracy, 'highest');
+    }
+
+    // Set default distance to 5 meters if not already set
+    if (instance.getInt(distance) == null) {
+      await instance.setInt(distance, 5);
+    }
   }
 
   static Future<void> migrate() async {

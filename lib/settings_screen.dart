@@ -30,7 +30,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     };
   }
 
-  Future<void> _editSetting(String title, String key, bool isInt) async {
+  Future<void> _editSetting(String title, String key, bool isInt, {TextInputType? keyboardType, List<TextInputFormatter>? inputFormatters}) async {
     final initialValue = isInt
         ? Preferences.instance.getInt(key)?.toString() ?? '0'
         : Preferences.instance.getString(key) ?? '';
@@ -176,7 +176,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          _buildListTile(AppLocalizations.of(context)!.idLabel, Preferences.id, false),
+          ListTile(
+            title: Text(AppLocalizations.of(context)!.idLabel),
+            subtitle: Text(Preferences.instance.getString(Preferences.id) ?? ''),
+            onTap: () => _editSetting(AppLocalizations.of(context)!.idLabel, Preferences.id, false, keyboardType: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
+          ),
           _buildListTile(AppLocalizations.of(context)!.urlLabel, Preferences.url, false),
           _buildAccuracyListTile(),
           _buildListTile(AppLocalizations.of(context)!.distanceLabel, Preferences.distance, true),

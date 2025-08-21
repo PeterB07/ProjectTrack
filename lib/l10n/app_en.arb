@@ -10,7 +10,7 @@
   "settingsButton": "Change settings",
   "invalidValue": "Invalid value",
   "disabledValue": "Disabled",
-  "idLabel": "Device identifier",
+  "idLabel": "Phone number",
   "urlLabel": "Server URL",
   "accuracyLabel": "Location accuracy",
   "highestAccuracyLabel": "Highest",

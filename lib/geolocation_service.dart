@@ -124,9 +124,9 @@ class GeolocationService {
     final a =
         sinLat * sinLat +
         cos(_degToRad(from.coords.latitude)) *
-            cos(_degToRad(to.coords.latitude)) *
-            sinLon *
-            sinLon;
+        cos(_degToRad(to.coords.latitude)) *
+        sinLon *
+        sinLon;
     final c = 2 * atan2(sqrt(a), sqrt(1 - a));
     return earthRadius * c;
   }
